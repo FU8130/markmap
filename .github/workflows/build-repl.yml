@@ -1,0 +1,73 @@
+name: Build Markmap REPL Offline
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:   # 允许手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout official repo
+        uses: actions/checkout@v4
+        with:
+          repository: markmap/markmap   # 官方仓库
+          ref: master                   # 或指定 tag
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages (including REPL)
+        run: pnpm build
+
+      # REPL 构建产物位于 packages/markmap-repl/dist
+      - name: Prepare offline package
+        run: |
+          mkdir offline-package
+          cp -r packages/markmap-repl/dist/* offline-package/
+          # 生成启动脚本（Windows 和 Linux/macOS）
+          cat > offline-package/start.bat <<EOF
+          @echo off
+          echo Starting local HTTP server...
+          start http://127.0.0.1:8080
+          miniserve -p 8080 --index index.html .
+          pause
+          EOF
+          cat > offline-package/start.sh <<EOF
+          #!/bin/bash
+          echo "Starting local HTTP server..."
+          if command -v miniserve &> /dev/null; then
+              miniserve -p 8080 --index index.html .
+          else
+              python3 -m http.server 8080
+          fi
+          EOF
+          chmod +x offline-package/start.sh
+          # 创建说明文件
+          cat > offline-package/README.txt <<EOF
+          离线 Markmap REPL 使用说明
+          ===========================
+          1. 启动 HTTP 服务器（二选一）：
+             - Windows: 双击 start.bat
+             - Linux/macOS: ./start.sh
+             - 或手动运行：miniserve -p 8080 --index index.html .
+             或：python -m http.server 8080
+          2. 打开浏览器访问 http://127.0.0.1:8080
+          3. 所有资源均在本地，无需互联网。
+          EOF
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: markmap-repl-offline
+          path: offline-package/
