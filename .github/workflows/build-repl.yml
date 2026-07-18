@@ -1,7 +1,7 @@
 name: Build Markmap REPL Offline
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:   # 手动触发
 
 jobs:
   build:
@@ -11,7 +11,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: markmap/markmap
-          ref: master
+          ref: master          # 可改为特定 tag，如 v0.18.12
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
+      - name: Build all packages (including REPL)
         run: pnpm build
 
       - name: Prepare offline package
@@ -48,7 +48,14 @@ jobs:
           fi
           EOF
           chmod +x offline-package/start.sh
-          echo "离线包已生成，请下载 artifact。" > offline-package/README.txt
+          cat > offline-package/README.txt <<EOF
+          Markmap REPL 离线包
+          启动方式：
+          - Windows: 双击 start.bat
+          - Linux/macOS: ./start.sh
+          或手动运行: python -m http.server 8080
+          访问 http://127.0.0.1:8080
+          EOF
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
