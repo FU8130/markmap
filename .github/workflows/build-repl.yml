@@ -1,9 +1,7 @@
 name: Build Markmap REPL Offline
 
 on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:   # 允许手动触发
+  workflow_dispatch:   # 手动触发
 
 jobs:
   build:
@@ -13,13 +11,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: markmap/markmap   # 官方仓库
-          ref: master                   # 或指定 tag
+          ref: master                   # 可改为特定 tag，如 v0.18.12
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
-          cache: 'pnpm'
+          node-version: 22
 
       - name: Install pnpm
         run: npm install -g pnpm
@@ -30,12 +27,11 @@ jobs:
       - name: Build all packages (including REPL)
         run: pnpm build
 
-      # REPL 构建产物位于 packages/markmap-repl/dist
       - name: Prepare offline package
         run: |
           mkdir offline-package
           cp -r packages/markmap-repl/dist/* offline-package/
-          # 生成启动脚本（Windows 和 Linux/macOS）
+          # 生成启动脚本（Windows / Linux/macOS）
           cat > offline-package/start.bat <<EOF
           @echo off
           echo Starting local HTTP server...
@@ -53,7 +49,6 @@ jobs:
           fi
           EOF
           chmod +x offline-package/start.sh
-          # 创建说明文件
           cat > offline-package/README.txt <<EOF
           离线 Markmap REPL 使用说明
           ===========================
